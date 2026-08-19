@@ -1,5 +1,6 @@
 import { ArrowRight, CarFront, Check, ChevronDown, Clock3, Globe2, Luggage, Menu, MessageCircle, Phone, Plane, ShieldCheck, Sparkles, Users, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { getTranslation, type Language } from './lib/i18n'
 
 type Service = { title: string; slug: string; text: string; icon: typeof Clock3 }
 type FleetItem = { name: string; meta: string; equipment: string; image: string }
@@ -17,12 +18,11 @@ const fleet: FleetItem[] = [
   { name: 'Premium SUV', meta: '5 yolcu · 5 bagaj', equipment: 'Yüksek sürüş · Deri kabin · Şarj ünitesi', image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=85' },
 ]
 
-const navItems = [['Hizmetler', '/hizmetler'], ['Filo', '/filo'], ['Kurumsal', '/kurumsal'], ['Hakkımızda', '/hakkimizda'], ['SSS', '/sss'], ['İletişim', '/iletisim']]
-
 function App() {
   const [path, setPath] = useState(window.location.pathname || '/')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [language, setLanguage] = useState('tr')
+  const [language, setLanguage] = useState<Language>('tr')
+  const t = getTranslation(language)
 
   useEffect(() => {
     const onPop = () => setPath(window.location.pathname || '/')
@@ -37,13 +37,15 @@ function App() {
   return <div className="site-shell">
     <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} language={language} setLanguage={setLanguage} />
     <main>{isHome ? <Home navigate={navigate} /> : <Page path={path} navigate={navigate} />}</main>
-    <Footer navigate={navigate} />
-    <div className="mobile-bar"><a href="/iletisim" onClick={(e) => { e.preventDefault(); navigate('/iletisim') }}><Phone size={18} />Ara</a><a href="/iletisim" onClick={(e) => { e.preventDefault(); navigate('/iletisim') }}><MessageCircle size={18} />WhatsApp</a></div>
+    <Footer navigate={navigate} language={language} />
+    <div className="mobile-bar"><a href="/iletisim" onClick={(e) => { e.preventDefault(); navigate('/iletisim') }}><Phone size={18} />{t.actions.call}</a><a href="/iletisim" onClick={(e) => { e.preventDefault(); navigate('/iletisim') }}><MessageCircle size={18} />{t.actions.whatsapp}</a></div>
   </div>
 }
 
-function Header({ path, menuOpen, setMenuOpen, navigate, language, setLanguage }: { path: string; menuOpen: boolean; setMenuOpen: (v: boolean) => void; navigate: (to: string) => void; language: string; setLanguage: (v: string) => void }) {
-  return <header className="site-header"><button className="wordmark" onClick={() => navigate('/')} aria-label="VIP Transfer ana sayfa"><span>VIP</span> TRANSFER</button><button className="menu-toggle" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button><nav id="primary-navigation" className={menuOpen ? 'nav nav-open' : 'nav'} aria-label="Ana navigasyon">{navItems.map(([label, href]) => <a key={href} aria-current={path === href ? 'page' : undefined} href={href} onClick={(e) => { e.preventDefault(); navigate(href) }}>{label}</a>)}<label className="language-select"><Globe2 size={15} /><span className="sr-only">Dil seçimi</span><select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label="Dil seçimi"><option value="tr">TR</option><option value="en">EN</option><option value="ar">AR</option></select></label><a className="nav-cta" href="/rezervasyon" onClick={(e) => { e.preventDefault(); navigate('/rezervasyon') }}>Teklif al <ArrowRight size={16} /></a></nav></header>
+function Header({ path, menuOpen, setMenuOpen, navigate, language, setLanguage }: { path: string; menuOpen: boolean; setMenuOpen: (v: boolean) => void; navigate: (to: string) => void; language: Language; setLanguage: (v: Language) => void }) {
+  const t = getTranslation(language)
+  const navItems = [[t.nav.services, '/hizmetler'], [t.nav.fleet, '/filo'], [t.nav.corporate, '/kurumsal'], [t.nav.about, '/hakkimizda'], [t.nav.faq, '/sss'], [t.nav.contact, '/iletisim'], [t.nav.booking, '/rezervasyon']]
+  return <header className="site-header"><button className="wordmark" onClick={() => navigate('/')} aria-label={t.labels.home}><span>VIP</span> TRANSFER</button><button className="menu-toggle" aria-label={menuOpen ? t.labels.menuClose : t.labels.menuOpen} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button><nav id="primary-navigation" className={menuOpen ? 'nav nav-open' : 'nav'} aria-label={t.nav.services}>{navItems.map(([label, href]) => <a key={href} aria-current={path === href ? 'page' : undefined} href={href} onClick={(e) => { e.preventDefault(); navigate(href) }}>{label}</a>)}<label className="language-select"><Globe2 size={15} /><span className="sr-only">{t.labels.language}</span><select value={language} onChange={(e) => setLanguage(e.target.value as Language)} aria-label={t.labels.language}><option value="tr">TR</option><option value="en">EN</option><option value="ar">AR</option></select></label><a className="nav-cta" href="/rezervasyon" onClick={(e) => { e.preventDefault(); navigate('/rezervasyon') }}>{t.actions.quote} <ArrowRight size={16} /></a></nav></header>
 }
 
 function Home({ navigate }: { navigate: (to: string) => void }) {
@@ -78,6 +80,6 @@ function Contact() { return <div className="contact-layout"><div className="cont
 function Corporate() { return <div className="copy-grid"><h2>Her toplantıya<br /><em>zamanında.</em></h2><div><p>Kurumsal personel taşıma ve yönetici transferlerini aylık anlaşma, düzenli raporlama ve faturalı operasyonla yönetiyoruz.</p><p>İş programınız değiştiğinde esnek, ihtiyaçlarınız büyüdüğünde ölçeklenebilir bir ulaşım planı.</p></div></div> }
 function About() { return <div className="copy-grid"><h2>Konforu standart<br /><em>kabul ediyoruz.</em></h2><div><p>Deneyimli şoförler, temiz araçlar ve net iletişim; VIP Transfer deneyiminin üç temelini oluşturur.</p><ul className="check-list"><li><Check size={17} /> Dakik karşılama</li><li><Check size={17} /> Kişiye göre planlama</li><li><Check size={17} /> Katar genelinde özenli hizmet</li></ul></div></div> }
 function Legal() { return <div className="legal-copy"><h2>Aydınlatma metni</h2><p>İletişim formu üzerinden paylaşılan bilgiler yalnızca talebinizi yanıtlamak ve rezervasyon sürecini yürütmek amacıyla işlenir. Detaylı metin, işletme iletişim bilgileri netleştirildiğinde bu sayfada yayınlanacaktır.</p></div> }
-function Footer({ navigate }: { navigate: (to: string) => void }) { return <footer className="site-footer"><div className="section-wrap footer-grid"><div><button className="wordmark" onClick={() => navigate('/')}><span>VIP</span> TRANSFER</button><p>Katar'da konforlu, güvenilir ve özenli ulaşım.</p></div><div><p className="eyebrow">İLETİŞİM</p><p>Telefon, WhatsApp ve e-posta bilgileri yakında burada yer alacak.</p></div><div><p className="eyebrow">DİL</p><p>Türkçe · English · العربية</p></div></div><div className="section-wrap footer-bottom"><span>© 2026 VIP Transfer</span><button onClick={() => navigate('/kvkk')}>KVKK</button></div></footer> }
+function Footer({ navigate, language }: { navigate: (to: string) => void; language: Language }) { const t = getTranslation(language); return <footer className="site-footer"><div className="section-wrap footer-grid"><div><button className="wordmark" onClick={() => navigate('/')}><span>VIP</span> TRANSFER</button><p>{t.footer.description}</p></div><div><p className="eyebrow">{t.footer.contact}</p><p>{language === 'tr' ? 'Telefon, WhatsApp ve e-posta bilgileri yakında burada yer alacak.' : 'Phone, WhatsApp and email details will be added here.'}</p></div><div><p className="eyebrow">{t.footer.languages}</p><p>Türkçe · English · العربية</p></div></div><div className="section-wrap footer-bottom"><span>© 2026 VIP Transfer</span><button onClick={() => navigate('/kvkk')}>{t.footer.privacy}</button></div></footer> }
 
 export default App
