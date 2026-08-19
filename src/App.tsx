@@ -19,10 +19,10 @@ function App() {
     <div className="site-shell">
       <header className="site-header">
         <a className="wordmark" href="#top" aria-label="VIP Transfer ana sayfa"><span>VIP</span> TRANSFER</a>
-        <button className="menu-toggle" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} onClick={() => setMenuOpen(!menuOpen)}>
+        <button className="menu-toggle" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
-        <nav className={menuOpen ? 'nav nav-open' : 'nav'} aria-label="Ana navigasyon">
+        <nav id="primary-navigation" className={menuOpen ? 'nav nav-open' : 'nav'} aria-label="Ana navigasyon">
           <a href="#hizmetler" onClick={() => setMenuOpen(false)}>Hizmetler</a>
           <a href="#filo" onClick={() => setMenuOpen(false)}>Filo</a>
           <a href="#neden-biz" onClick={() => setMenuOpen(false)}>Neden biz</a>
