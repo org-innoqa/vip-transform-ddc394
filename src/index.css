@@ -120,6 +120,11 @@ details p { color: var(--muted); line-height: 1.6; max-width: 620px; }
 [dir='rtl'] .card-index { left: 30px; right: auto; }
 [dir='rtl'] .hero-actions, [dir='rtl'] .trust-strip div, [dir='rtl'] .fleet-info, [dir='rtl'] .benefits div, [dir='rtl'] .check-list li { direction: rtl; }
 @media (max-width: 760px) { [dir='rtl'] .hero-visual { margin-left: 0; margin-right: 18px; } [dir='rtl'] .hero-note { left: -14px; right: auto; } [dir='rtl'] .nav a { align-self: flex-end; } }
+[dir='rtl'] { text-align: right; }
+[dir='rtl'] .nav-cta svg, [dir='rtl'] .button svg, [dir='rtl'] .inline-action svg { transform: rotate(180deg); }
+[dir='rtl'] .contact-form .button { justify-self: end; }
+[dir='rtl'] .admin-table th, [dir='rtl'] .admin-table td { text-align: right; }
+[dir='rtl'] .footer-bottom { direction: rtl; }
 .admin-shell { padding: 64px 0 110px; min-height: 100vh; }
 .admin-head { align-items: end; display: flex; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 .admin-head h1 { font-size: clamp(34px, 5vw, 56px); }

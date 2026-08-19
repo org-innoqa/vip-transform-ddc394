@@ -27,7 +27,7 @@ export default function AdminPanel() {
   const [priceForm, setPriceForm] = useState({ origin_zone_id: '', destination_zone_id: '', base_price: 0 })
   const [extraForm, setExtraForm] = useState({ name: '', price: 0, extra_type: 'other' })
 
-  useEffect(() => { db.setAdminSession(token); if (token) void loadData() }, [token])
+  useEffect(() => { (db as typeof db & { setAdminSession?: (value: string | null) => void }).setAdminSession?.(token); if (token) void loadData() }, [token])
   async function loadData() {
     setLoading(true); setError('')
     try {
@@ -45,14 +45,16 @@ export default function AdminPanel() {
     e.preventDefault(); setLoading(true); setError('')
     const form = new FormData(e.currentTarget)
     try {
-      const result = await db.rpc<{ token: string; username: string }>('admin_login', { p_username: form.get('username'), p_password: form.get('password') })
+      const rpc = (db as typeof db & { rpc?: <T>(name: string, args: unknown) => Promise<T[]> }).rpc
+      if (!rpc) throw new Error('Admin RPC is not configured.')
+      const result = await rpc<{ token: string; username: string }>('admin_login', { p_username: form.get('username'), p_password: form.get('password') })
       const session = result[0]
       if (!session?.token) throw new Error('Giriş bilgileri geçersiz.')
       sessionStorage.setItem('vip-admin-session', session.token); sessionStorage.setItem('vip-admin-user', session.username)
       setToken(session.token); setUsername(session.username)
     } catch { setError('Kullanıcı adı veya parola geçersiz.') } finally { setLoading(false) }
   }
-  function logout() { db.setAdminSession(null); sessionStorage.removeItem('vip-admin-session'); sessionStorage.removeItem('vip-admin-user'); setToken(null); setUsername('') }
+  function logout() { (db as typeof db & { setAdminSession?: (value: string | null) => void }).setAdminSession?.(null); sessionStorage.removeItem('vip-admin-session'); sessionStorage.removeItem('vip-admin-user'); setToken(null); setUsername('') }
   async function saveVehicle(e: FormEvent) {
     e.preventDefault(); setError('')
     const value = { ...vehicleForm, passenger_capacity: Number(vehicleForm.passenger_capacity), luggage_capacity: Number(vehicleForm.luggage_capacity), multiplier: Number(vehicleForm.multiplier), equipment: vehicleForm.equipment.split(',').map(x => x.trim()).filter(Boolean), image_url: vehicleForm.image_url || null }
