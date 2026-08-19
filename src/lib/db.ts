@@ -10,6 +10,7 @@ const BASE_URL = import.meta.env.VITE_POSTGREST_URL as string;
 const SCHEMA = import.meta.env.VITE_DB_SCHEMA as string;
 const ANON_TOKEN = import.meta.env.VITE_DB_ANON_TOKEN as string;
 const FILES_URL = import.meta.env.VITE_PROJECT_FILES_URL as string;
+let adminSession: string | null = null;
 
 type QueryValue = string | number | boolean | null | undefined;
 type QueryOptions = {
@@ -60,6 +61,7 @@ function buildHeaders(write: boolean): Record<string, string> {
   };
   if (write) headers['Content-Profile'] = SCHEMA;
   if (ANON_TOKEN) headers['Authorization'] = `Bearer ${ANON_TOKEN}`;
+  if (adminSession) headers['x-admin-session'] = adminSession;
   return headers;
 }
 
@@ -74,6 +76,13 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export const db = {
+  setAdminSession(token: string | null) { adminSession = token; },
+  async rpc<T = any>(fn: string, values: Record<string, unknown> = {}): Promise<T[]> {
+    const res = await fetch(`${BASE_URL}/rpc/${fn}`, {
+      method: 'POST', headers: buildHeaders(true), body: JSON.stringify(values),
+    });
+    return handle<T[]>(res);
+  },
   /** Read rows. `query` is an optional PostgREST query string starting with '?'. */
   async select<T = any>(table: string, query: Query = ''): Promise<T[]> {
     const res = await fetch(`${BASE_URL}/${table}${queryString(query)}`, { headers: buildHeaders(false) });

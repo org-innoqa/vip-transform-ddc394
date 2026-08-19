@@ -1,6 +1,7 @@
 import { ArrowRight, CarFront, Check, ChevronDown, Clock3, Globe2, Luggage, Menu, MessageCircle, Phone, Plane, ShieldCheck, Sparkles, Users, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { getTranslation, type Language } from './lib/i18n'
+import AdminPanel from './AdminPanel'
 
 type Service = { title: string; slug: string; text: string; icon: typeof Clock3 }
 type FleetItem = { name: string; meta: string; equipment: string; image: string }
@@ -35,6 +36,7 @@ function App() {
 
   const navigate = (to: string) => { window.history.pushState({}, '', to); setPath(to.split('?')[0]); setSelectedVehicle(new URLSearchParams(to.split('?')[1] || '').get('vehicle') || undefined); setMenuOpen(false) }
   const isHome = path === '/'
+  if (path === '/admin') return <AdminPanel />
   return <div className="site-shell">
     <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} language={language} setLanguage={setLanguage} />
     <main>{isHome ? <Home navigate={navigate} /> : <Page path={path} navigate={navigate} selectedVehicle={selectedVehicle} />}</main>
