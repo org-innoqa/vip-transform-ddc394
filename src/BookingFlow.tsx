@@ -26,7 +26,41 @@ export default function BookingFlow({ language, selectedVehicle }: { language: L
   function set<K extends keyof Form>(key: K, value: Form[K]) { setForm(f => ({ ...f, [key]: value })); setFieldErrors(e => ({ ...e, [key]: '' })); setError('') }
   function validate(): boolean { const e: Record<string, string> = {}; if (step === 0) { if (!form.origin_zone_id) e.origin_zone_id = t.required; if (!form.destination_zone_id) e.destination_zone_id = t.required; if (form.origin_zone_id && form.origin_zone_id === form.destination_zone_id) e.destination_zone_id = t.required; if (!form.pickup_at) e.pickup_at = t.required } if (step === 1 && !form.vehicle_id) e.vehicle_id = t.required; if (step === 3) { if (!form.customer_name.trim()) e.customer_name = t.required; if (!form.customer_phone.trim()) e.customer_phone = t.required; if (!/^\S+@\S+\.\S+$/.test(form.customer_email)) e.customer_email = t.invalidEmail; if (!form.kvkk) e.kvkk = t.consentError; if (form.honeypot) e.honeypot = t.honeypot } setFieldErrors(e); return !Object.keys(e).length }
   function next() { if (validate()) setStep(s => Math.min(3, s + 1)) }
-  async function submit() { if (!validate() || !amount) { if (!amount) setError('Kalkış, varış ve seçili araç için aktif tarife bulunamadı.'); return } setSubmitting(true); try { const code = `VIP-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`; const rows = await db.insert<{ id: string }>('reservations', { code, service_type: form.service_type, origin_zone_id: form.origin_zone_id, destination_zone_id: form.destination_zone_id, vehicle_id: form.vehicle_id, pickup_at: new Date(form.pickup_at).toISOString(), is_round_trip: form.is_round_trip, passenger_count: form.passenger_count, luggage_count: form.luggage_count, flight_number: form.flight_number.trim() || null, customer_name: form.customer_name.trim(), customer_phone: form.customer_phone.trim(), customer_email: form.customer_email.trim(), customer_note: form.customer_note.trim() || null, calculated_amount: amount, status: 'new', kvkk_consent_at: new Date().toISOString() }); const reservationId = rows[0]?.id; const selectedExtras = data.extras.filter(x => (form.extras[x.id] || 0) > 0); if (reservationId && selectedExtras.length) await db.insert('reservation_extras', selectedExtras.map(x => ({ reservation_id: reservationId, extra_id: x.id, quantity: form.extras[x.id], unit_price: x.price }))); setConfirmation({ code, amount }) } catch { setError('Rezervasyon kaydedilemedi. Bilgilerinizi kontrol edip tekrar deneyin.') } finally { setSubmitting(false) } }
+  async function submit() {
+    if (!validate() || !amount) {
+      if (!amount) setError('Kalkış, varış ve seçili araç için aktif tarife bulunamadı.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const selectedExtras = data.extras
+        .filter(x => (form.extras[x.id] || 0) > 0)
+        .map(x => ({ extra_id: x.id, quantity: form.extras[x.id] }))
+      const rows = await db.rpc<{ id: string; code: string; calculated_amount: number; currency_code: string }>('create_reservation', {
+        p_service_type: form.service_type,
+        p_origin_zone_id: form.origin_zone_id,
+        p_destination_zone_id: form.destination_zone_id,
+        p_vehicle_id: form.vehicle_id,
+        p_pickup_at: new Date(form.pickup_at).toISOString(),
+        p_is_round_trip: form.is_round_trip,
+        p_passenger_count: form.passenger_count,
+        p_luggage_count: form.luggage_count,
+        p_flight_number: form.flight_number.trim() || null,
+        p_customer_name: form.customer_name.trim(),
+        p_customer_phone: form.customer_phone.trim(),
+        p_customer_email: form.customer_email.trim(),
+        p_customer_note: form.customer_note.trim() || null,
+        p_kvkk_consent_at: new Date().toISOString(),
+        p_honeypot: form.honeypot,
+        p_extras: selectedExtras,
+      })
+      const reservation = rows[0]
+      if (!reservation?.code) throw new Error('reservation_not_created')
+      setConfirmation({ code: reservation.code, amount: Number(reservation.calculated_amount) })
+    } catch {
+      setError('Rezervasyon kaydedilemedi. Bilgilerinizi kontrol edip tekrar deneyin.')
+    } finally { setSubmitting(false) }
+  }
   if (loading) return <div className="booking-flow loading-state"><LoaderCircle className="spin" />{t.loading}</div>
   if (confirmation) return <div className="booking-flow confirmation"><Check size={38} /><p className="eyebrow">{t.success}</p><h2>{t.code}: {confirmation.code}</h2><p>{t.summary}</p><strong>{t.estimate}: {confirmation.amount.toFixed(2)} {data.settings.currency_code}</strong><p className="price-note">{t.notePrice}</p></div>
   const input = (key: keyof Form, label: string, props: Record<string, string | number> = {}) => <label className={fieldErrors[key as string] ? 'has-error' : ''}>{label}<input {...props} value={String(form[key] ?? '')} onChange={e => set(key, e.target.value as Form[typeof key])} />{fieldErrors[key as string] && <small className="field-error">{fieldErrors[key as string]}</small>}</label>
