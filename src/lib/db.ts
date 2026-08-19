@@ -11,13 +11,6 @@ const SCHEMA = import.meta.env.VITE_DB_SCHEMA as string;
 const ANON_TOKEN = import.meta.env.VITE_DB_ANON_TOKEN as string;
 const FILES_URL = import.meta.env.VITE_PROJECT_FILES_URL as string;
 
-let adminSession: string | null = null;
-
-/** Set the opaque server-issued admin session used by protected PostgREST calls. */
-export function setAdminSession(token: string | null): void {
-  adminSession = token;
-}
-
 type QueryValue = string | number | boolean | null | undefined;
 type QueryOptions = {
   filters?: Record<string, QueryValue>;
@@ -67,7 +60,6 @@ function buildHeaders(write: boolean): Record<string, string> {
   };
   if (write) headers['Content-Profile'] = SCHEMA;
   if (ANON_TOKEN) headers['Authorization'] = `Bearer ${ANON_TOKEN}`;
-  if (adminSession) headers['x-admin-session'] = adminSession;
   return headers;
 }
 
@@ -119,15 +111,6 @@ export const db = {
       headers: buildHeaders(true),
     });
     await handle<void>(res);
-  },
-  /** Call a PostgREST stored procedure using its named arguments. */
-  async rpc<T = any>(functionName: string, args: Record<string, unknown> = {}): Promise<T[]> {
-    const res = await fetch(`${BASE_URL}/rpc/${encodeURIComponent(functionName)}`, {
-      method: 'POST',
-      headers: { ...buildHeaders(true), Prefer: 'return=representation' },
-      body: JSON.stringify(args),
-    });
-    return handle<T[]>(res);
   },
 };
 
