@@ -10,11 +10,6 @@ const BASE_URL = import.meta.env.VITE_POSTGREST_URL as string;
 const SCHEMA = import.meta.env.VITE_DB_SCHEMA as string;
 const ANON_TOKEN = import.meta.env.VITE_DB_ANON_TOKEN as string;
 const FILES_URL = import.meta.env.VITE_PROJECT_FILES_URL as string;
-let adminSession: string | null = null;
-
-export function setAdminSession(token: string | null): void {
-  adminSession = token;
-}
 
 type QueryValue = string | number | boolean | null | undefined;
 type QueryOptions = {
@@ -65,7 +60,6 @@ function buildHeaders(write: boolean): Record<string, string> {
   };
   if (write) headers['Content-Profile'] = SCHEMA;
   if (ANON_TOKEN) headers['Authorization'] = `Bearer ${ANON_TOKEN}`;
-  if (adminSession) headers['x-admin-session'] = adminSession;
   return headers;
 }
 
@@ -117,15 +111,6 @@ export const db = {
       headers: buildHeaders(true),
     });
     await handle<void>(res);
-  },
-  /** Call a PostgreSQL function exposed by PostgREST. */
-  async rpc<T = any>(name: string, args: Record<string, unknown> = {}): Promise<T[]> {
-    const res = await fetch(`${BASE_URL}/rpc/${encodeURIComponent(name)}`, {
-      method: 'POST',
-      headers: buildHeaders(true),
-      body: JSON.stringify(args),
-    });
-    return handle<T[]>(res);
   },
 };
 
