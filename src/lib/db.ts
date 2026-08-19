@@ -53,12 +53,6 @@ function queryString(query: Query = ''): string {
   return value ? `?${value}` : '';
 }
 
-let adminSession: string | null = null;
-
-export function setAdminSession(token: string | null): void {
-  adminSession = token;
-}
-
 function buildHeaders(write: boolean): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -66,7 +60,6 @@ function buildHeaders(write: boolean): Record<string, string> {
   };
   if (write) headers['Content-Profile'] = SCHEMA;
   if (ANON_TOKEN) headers['Authorization'] = `Bearer ${ANON_TOKEN}`;
-  if (adminSession) headers['x-admin-session'] = adminSession;
   return headers;
 }
 
@@ -118,15 +111,6 @@ export const db = {
       headers: buildHeaders(true),
     });
     await handle<void>(res);
-  },
-  /** Call a PostgREST stored procedure using its named arguments. */
-  async rpc<T = any>(functionName: string, args: Record<string, unknown> = {}): Promise<T[]> {
-    const res = await fetch(`${BASE_URL}/rpc/${encodeURIComponent(functionName)}`, {
-      method: 'POST',
-      headers: { ...buildHeaders(true), Prefer: 'return=representation' },
-      body: JSON.stringify(args),
-    });
-    return handle<T[]>(res);
   },
 };
 
