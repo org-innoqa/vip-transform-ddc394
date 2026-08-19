@@ -5,14 +5,12 @@
 //   db.insert('todos', { title: 'Buy milk' })
 //   db.update('todos', '?id=eq.1', { completed: true })
 //   db.remove('todos', '?id=eq.1')
+//   db.rpc('admin_login', { p_username: 'owner', p_password: '...' })
 
 const BASE_URL = import.meta.env.VITE_POSTGREST_URL as string;
 const SCHEMA = import.meta.env.VITE_DB_SCHEMA as string;
 const ANON_TOKEN = import.meta.env.VITE_DB_ANON_TOKEN as string;
 const FILES_URL = import.meta.env.VITE_PROJECT_FILES_URL as string;
-
-let adminSession: string | null = null;
-export function setAdminSession(token: string | null): void { adminSession = token; }
 
 type QueryValue = string | number | boolean | null | undefined;
 type QueryOptions = {
@@ -23,6 +21,20 @@ type QueryOptions = {
   offset?: number;
 };
 type Query = string | QueryOptions | Record<string, QueryValue>;
+let adminSessionToken = '';
+
+/**
+ * Uses an application-issued bearer token for subsequent database requests.
+ * Passing null clears the active session. Persistence remains the application's
+ * responsibility so each generated app can choose its own session lifetime.
+ */
+export function setAdminSession(token: string | null | undefined): void {
+  adminSessionToken = typeof token === 'string' ? token.trim() : '';
+}
+
+export function clearAdminSession(): void {
+  adminSessionToken = '';
+}
 
 function queryString(query: Query = ''): string {
   if (typeof query === 'string')
@@ -62,8 +74,8 @@ function buildHeaders(write: boolean): Record<string, string> {
     'Accept-Profile': SCHEMA,
   };
   if (write) headers['Content-Profile'] = SCHEMA;
-  if (ANON_TOKEN) headers['Authorization'] = `Bearer ${ANON_TOKEN}`;
-  if (adminSession) headers['x-admin-session'] = adminSession;
+  const bearerToken = adminSessionToken || ANON_TOKEN;
+  if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
   return headers;
 }
 
@@ -116,7 +128,10 @@ export const db = {
     });
     await handle<void>(res);
   },
+  /** Call a PostgreSQL function exposed by PostgREST. */
   async rpc<T = any>(functionName: string, args: Record<string, unknown> = {}): Promise<T[]> {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(functionName))
+      throw new Error('Invalid database function name.');
     const res = await fetch(`${BASE_URL}/rpc/${encodeURIComponent(functionName)}`, {
       method: 'POST',
       headers: { ...buildHeaders(true), Prefer: 'return=representation' },
@@ -124,6 +139,9 @@ export const db = {
     });
     return handle<T[]>(res);
   },
+  // Keep method-style session calls working for older generated projects.
+  setAdminSession,
+  clearAdminSession,
 };
 
 // Keep a default export for compatibility with existing generated applications.
