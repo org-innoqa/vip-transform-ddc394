@@ -6,7 +6,7 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'pricing_settings_operations_email_check') THEN
     ALTER TABLE pricing_settings ADD CONSTRAINT pricing_settings_operations_email_check
-      CHECK (operations_email IS NULL OR operations_email ~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$');
+      CHECK (operations_email IS NULL OR operations_email ~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$');
   END IF;
 END $$;
 
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS reservation_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   reservation_id uuid NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
   recipient_type text NOT NULL CHECK (recipient_type IN ('customer', 'company')),
-  recipient_email text NOT NULL CHECK (recipient_email ~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'),
+  recipient_email text NOT NULL CHECK (recipient_email ~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'),
   template_key text NOT NULL DEFAULT 'reservation_created',
   status text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sent', 'failed')),
   attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
@@ -75,7 +75,7 @@ BEGIN
      OR length(trim(p_customer_name)) > 160
      OR nullif(trim(coalesce(p_customer_phone, '')), '') IS NULL
      OR length(trim(p_customer_phone)) > 40
-     OR v_customer_email !~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
+     OR v_customer_email !~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
      OR length(v_customer_email) > 254
      OR p_kvkk_consent_at IS NULL THEN
     RAISE EXCEPTION 'invalid_reservation' USING ERRCODE = '22023';

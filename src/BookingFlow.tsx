@@ -20,7 +20,17 @@ const copy = {
 export default function BookingFlow({ language, selectedVehicle }: { language: Language; selectedVehicle?: string }) {
   const t = copy[language]; const [data, setData] = useState<{ vehicles: Vehicle[]; zones: Zone[]; rules: Rule[]; extras: Extra[]; settings: Settings }>({ vehicles: [], zones: [], rules: [], extras: [], settings: { round_trip_discount_percent: 0, night_surcharge_percent: 0, currency_code: 'QAR' } })
   const [form, setForm] = useState<Form>(initial); const [step, setStep] = useState(0); const [loading, setLoading] = useState(true); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState(''); const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}); const [confirmation, setConfirmation] = useState<{ code: string; amount: number } | null>(null)
-  useEffect(() => { Promise.all([db.select<Vehicle>('vehicles', { filters: { is_active: true }, orderBy: 'passenger_capacity' }), db.select<Zone>('zones', { filters: { is_active: true }, orderBy: 'name' }), db.select<Rule>('price_rules', { filters: { is_active: true } }), db.select<Extra>('extras', { filters: { is_active: true }, orderBy: 'name' }), db.select<Settings>('pricing_settings', { limit: 1 })]).then(([vehicles, zones, rules, extras, settings]) => { setData({ vehicles, zones, rules, extras, settings: settings[0] || data.settings }); const found = selectedVehicle && vehicles.find(v => v.model === selectedVehicle); if (found) setForm(f => ({ ...f, vehicle_id: found.id })) }).catch(() => setError('Rezervasyon verileri yüklenemedi. Lütfen tekrar deneyin.')).finally(() => setLoading(false)) }, [selectedVehicle])
+  useEffect(() => { Promise.all([db.rpc<Vehicle>('list_available_vehicles', { p_passenger_count: 1, p_luggage_count: 0 }), db.select<Zone>('zones', { filters: { is_active: true }, orderBy: 'name' }), db.select<Rule>('price_rules', { filters: { is_active: true } }), db.select<Extra>('extras', { filters: { is_active: true }, orderBy: 'name' }), db.select<Settings>('pricing_settings', { limit: 1 })]).then(([vehicles, zones, rules, extras, settings]) => { setData({ vehicles, zones, rules, extras, settings: settings[0] || data.settings }); const found = selectedVehicle && vehicles.find(v => v.model === selectedVehicle); if (found) setForm(f => ({ ...f, vehicle_id: found.id })) }).catch(() => setError('Rezervasyon verileri yüklenemedi. Lütfen tekrar deneyin.')).finally(() => setLoading(false)) }, [selectedVehicle])
+  useEffect(() => {
+    if (loading) return
+    let cancelled = false
+    db.rpc<Vehicle>('list_available_vehicles', { p_passenger_count: form.passenger_count, p_luggage_count: form.luggage_count }).then(vehicles => {
+      if (cancelled) return
+      setData(current => ({ ...current, vehicles }))
+      if (form.vehicle_id && !vehicles.some(vehicle => vehicle.id === form.vehicle_id)) set('vehicle_id', '')
+    }).catch(() => { if (!cancelled) setError('Uygun araçlar yüklenemedi. Lütfen tekrar deneyin.') })
+    return () => { cancelled = true }
+  }, [loading, form.passenger_count, form.luggage_count])
   const available = useMemo(() => data.vehicles.filter(v => v.passenger_capacity >= form.passenger_count && v.luggage_capacity >= form.luggage_count), [data.vehicles, form.passenger_count, form.luggage_count])
   const [serverAmount, setServerAmount] = useState<number | null>(null)
   useEffect(() => {
