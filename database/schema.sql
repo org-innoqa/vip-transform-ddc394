@@ -81,7 +81,24 @@ CREATE TABLE IF NOT EXISTS pricing_settings (
   night_start time NOT NULL DEFAULT '00:00',
   night_end time NOT NULL DEFAULT '06:00',
   currency_code char(3) NOT NULL DEFAULT 'QAR',
+  operations_email text,
   updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS reservation_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id uuid NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+  recipient_type text NOT NULL CHECK (recipient_type IN ('customer', 'company')),
+  recipient_email text NOT NULL,
+  template_key text NOT NULL DEFAULT 'reservation_created',
+  status text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sent', 'failed')),
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  last_error text,
+  provider_message_id text,
+  queued_at timestamptz NOT NULL DEFAULT now(),
+  sent_at timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (reservation_id, recipient_type, recipient_email)
 );
 
 CREATE INDEX IF NOT EXISTS price_rules_origin_zone_idx ON price_rules (origin_zone_id);
